@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+	xmlns:beans="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+	http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd
+	http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.0.xsd">
+
+	<global-method-security secured-annotations="enabled">
+	</global-method-security>
+
+	<beans:bean id="propertyConfigurer"
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<beans:property name="locations">
+			<beans:list>
+				<beans:value>classpath:jdbc.properties</beans:value>
+			</beans:list>
+		</beans:property>
+	</beans:bean>
+	<beans:bean id="authenticationEntryPoint"
+		class="org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint">
+		<beans:property name="loginFormUrl" value="/login.jsp" />
+	</beans:bean>
+	<http auto-config="false" entry-point-ref="authenticationEntryPoint">
+		<custom-filter ref="captchaAuthenticaionFilter"
+			position="FORM_LOGIN_FILTER" />
+		<!--不用Filter去处理的url -->
+		<intercept-url pattern="/login.htm*" filters="none" />
+		<intercept-url pattern="/domain_error.htm*" filters="none" />
+		<intercept-url pattern="*.css" filters="none" />
+		<intercept-url pattern="*.gif" filters="none" />
+		<intercept-url pattern="*.jpg" filters="none" />
+		<intercept-url pattern="*.jpeg" filters="none" />
+		<intercept-url pattern="*.png" filters="none" />
+		<intercept-url pattern="*.bmp" filters="none" />
+		<intercept-url pattern="/login.jsp" filters="none" />
+		<intercept-url pattern="/image2.jsp" filters="none" />
+		<access-denied-handler error-page="/error.jsp" />
+		<!-- <intercept-url pattern="/**" access="ROLE_USER,ROLE_ADMIN" /> -->
+		<!-- max-sessions允许最大登录用户数，exception-if-maximum-exceeded为false时候第二个用户登录踢出第一个，为true拒绝第二个用户登录 -->
+		<!-- <concurrent-session-control max-sessions="1" exception-if-maximum-exceeded="false" 
+			expired-url="/outline.htm" session-registry-alias="sessionRegistry" /> -->
+		<logout invalidate-session="true" logout-success-url="/"
+			logout-url="/j_spring_security_logout" />
+		<!-- "记住我"功能，采用持久化策略（将用户的登录信息存放在数据库表中）token-validity-seconds定义时间的长度（以秒计） -->
+		<remember-me user-service-ref="userDetailsService"
+			token-validity-seconds="604800" />
+		<!-- 检测失效的sessionId,超时时定位到另外一个URL -->
+		<!-- <session-management invalid-session-url="/login.jsp" /> -->
+	</http>
+
+	<beans:bean id="captchaAuthenticaionFilter" class="com.security.filter.CustomLoginFilter">
+		<beans:property name="authenticationManager" ref="authenticationManager" />
+		<!-- <beans:property name="usernameParameter" value="username" /> <beans:property 
+			name="passwordParameter" value="password" /> -->
+		<!-- 验证失败后的处理 -->
+		<beans:property name="authenticationFailureHandler"
+			ref="authenticationFailureHandler" />
+		<!-- 验证成功后的处理 -->
+		<!-- <beans:property name="authenticationSuccessHandler" ref="authenticationSuccessHandler" 
+			/> -->
+		<!-- 处理登录的action -->
+		<beans:property name="filterProcessesUrl" value="/login.action" />
+	</beans:bean>
+	<beans:bean id="authenticationFailureHandler"
+		class="org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler">
+		<beans:property name="defaultFailureUrl" value="/login.jsp" />
+	</beans:bean>
+	<!-- <beans:bean id="authenticationSuccessHandler" class="com.zrhis.system.security.SimpleLoginSuccessHandler"> 
+		<beans:property name="defaultTargetUrl" value="/index.jsp"></beans:property> 
+		<beans:property name="forwardToDestination" value="true"></beans:property> 
+		</beans:bean> -->
+
+	<beans:bean id="dataSource"
+		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<beans:property name="driverClassName" value="${jdbc_driver}">
+		</beans:property>
+		<beans:property name="url" value="${jdbc_url}">
+		</beans:property>
+		<beans:property name="username" value="${jdbc_user}"></beans:property>
+		<beans:property name="password" value="${jdbc_password}"></beans:property>
+	</beans:bean>
+	<authentication-manager alias="authenticationManager">
+		<!-- 如果我们需要改变认证的方式，我们可以实现自己的AuthenticationProvider,可以在配置文件中这样配置来使用我们自己的AuthenticationProvider。其中myAuthenticationProvider就是我们自己的AuthenticationProvider实现类对应的bean。 -->
+		<authentication-provider user-service-ref="userDetailsService">  <!-- ref="authenticationProvider" -->
+			<!-- 密码方式md5 -->
+			<password-encoder hash="md5" />
+			<!-- <user-service> <user name="user" password="user" authorities="ROLE_USER" 
+				/> </user-service> -->
+			<!-- role-prefix=""指定角色的前缀 -->
+			<!-- <jdbc-user-service data-source-ref="dataSource" users-by-username-query="select 
+				username, password, enabled from users where username = ?" authorities-by-username-query="select 
+				username, authority from authorities where username = ?" /> -->
+		</authentication-provider>
+	</authentication-manager>
+
+	<beans:bean id="userDetailsService"
+		class="org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl">
+		<beans:property name="dataSource" ref="dataSource" />
+		<!-- 指定查询用户信息的SQL -->
+		<beans:property name="usersByUsernameQuery"
+			value="select username, password, enabled from users where username = ?" />
+		<!-- 指定查询用户权限的SQL -->
+		<beans:property name="authoritiesByUsernameQuery"
+			value="select username, 
+			authority from authorities where username = ?" />
+		<!-- enableGroups默认是不启用的。如果需要启用用户组权限，需要指定enableGroups属性值为true -->
+		<!-- <beans:property name="enableGroups" value="true" /> -->
+		<!-- 指定查询用户组权限的SQL -->
+		<!-- <beans:property name="groupAuthoritiesByUsernameQuery" value="select 
+			g.id, g.group_name, ga.authority from groups g, groups_members gm, groups_authorities 
+			ga where gm.username=? and g.id=ga.group_id and g.id=gm.group_id" /> -->
+	</beans:bean>
+</beans:beans>

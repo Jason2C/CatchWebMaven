@@ -1,0 +1,79 @@
+package com.util;
+
+import java.lang.reflect.Field;
+
+/**
+ * 瀵硅鐗╃悊鍒嗛〉鍋氫簡涓嬫墿灞曟潵鏀寔mybatis鐨刦oreach鏍囩
+ * Date:15/8/06
+ * Time:11:43
+ * Author Mr.Object
+ */
+public class ReflectUtil {
+
+    /**
+     * 鑾峰彇obj瀵硅薄fieldName鐨凢ield
+     *
+     * @param obj
+     * @param fieldName
+     * @return
+     */
+    public static Field getFieldByFieldName(Object obj, String fieldName) {
+        for (Class<?> superClass = obj.getClass(); superClass != Object.class; superClass = superClass.getSuperclass()) {
+            try {
+                return superClass.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 鑾峰彇obj瀵硅薄fieldName鐨勫睘鎬у�
+     *
+     * @param obj
+     * @param fieldName
+     * @return
+     * @throws SecurityException
+     * @throws NoSuchFieldException
+     * @throws IllegalArgumentException
+     * @throws IllegalAccessException
+     */
+    public static Object getValueByFieldName(Object obj, String fieldName) throws SecurityException,
+            NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
+        Field field = getFieldByFieldName(obj, fieldName);
+        Object value = null;
+        if (field != null) {
+            if (field.isAccessible()) {
+                value = field.get(obj);
+            } else {
+                field.setAccessible(true);
+                value = field.get(obj);
+                field.setAccessible(false);
+            }
+        }
+        return value;
+    }
+
+    /**
+     * 璁剧疆obj瀵硅薄fieldName鐨勫睘鎬у�
+     *
+     * @param obj
+     * @param fieldName
+     * @param value
+     * @throws SecurityException
+     * @throws NoSuchFieldException
+     * @throws IllegalArgumentException
+     * @throws IllegalAccessException
+     */
+    public static void setValueByFieldName(Object obj, String fieldName, Object value) throws SecurityException,
+            NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
+        Field field = getFieldByFieldName(obj, fieldName);
+        if (field.isAccessible()) {
+            field.set(obj, value);
+        } else {
+            field.setAccessible(true);
+            field.set(obj, value);
+            field.setAccessible(false);
+        }
+    }
+}
